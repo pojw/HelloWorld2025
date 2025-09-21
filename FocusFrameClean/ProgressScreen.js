@@ -8,25 +8,74 @@ import {
   Button,
   Alert,
   TouchableOpacity,
+  Modal,
+  FlatList,
+  SafeAreaView, // Import SafeAreaView
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initialProgressData } from "./ProgressData";
 import DataModal from "./DataModal";
+import Achievements from "./Achievements";
+import { Ionicons } from "@expo/vector-icons";
+import ShareAchievementModal from "./ShareAchievementModal";
+import LogActivityModal from "./LogActivityModal"; // Assuming a new modal for logging
+
+const allBadges = [
+  {
+    id: "start",
+    name: "Getting Started",
+    criteria: 1,
+    icon: "star",
+    color: "#FFD700",
+  },
+  {
+    id: "two_weeks",
+    name: "Two-Week Trend",
+    criteria: 2,
+    icon: "rocket",
+    color: "#FFA500",
+  },
+  {
+    id: "four_weeks",
+    name: "Four-Week Streak",
+    criteria: 4,
+    icon: "trophy",
+    color: "#4CAF50",
+  },
+  {
+    id: "eight_weeks",
+    name: "Productivity Guru",
+    criteria: 8,
+    icon: "sparkles",
+    color: "#00BFFF",
+  },
+];
 
 export default function ProgressScreen() {
   const [weeklyData, setWeeklyData] = useState([]);
-  const [appName, setAppName] = useState("");
-  const [timeInMinutes, setTimeInMinutes] = useState("");
-  const [week, setWeek] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
   const [dataModalVisible, setDataModalVisible] = useState(false);
+  const [achievementsModalVisible, setAchievementsModalVisible] =
+    useState(false);
+  const [earnedBadges, setEarnedBadges] = useState([]);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [badgeToShare, setBadgeToShare] = useState(null);
+  const [logModalVisible, setLogModalVisible] = useState(false);
 
   useEffect(() => {
-    loadWeeklyData();
+    loadData();
   }, []);
 
-  const loadWeeklyData = async () => {
+  // New useEffect to check for achievements when data changes
+  useEffect(() => {
+    if (weeklyData.length > 0) {
+      const weeksLogged = weeklyData.filter(
+        (item) => item.appName && item.appName.toLowerCase() === "instagram"
+      ).length;
+      checkAndAwardBadges(weeksLogged);
+    }
+  }, [weeklyData]);
+
+  const loadData = async () => {
     try {
       const savedData = await AsyncStorage.getItem("weeklyData");
       let data = savedData ? JSON.parse(savedData) : [];
@@ -36,8 +85,13 @@ export default function ProgressScreen() {
         await saveWeeklyData(data);
       }
       setWeeklyData(data);
+
+      const savedBadges = await AsyncStorage.getItem("earnedBadges");
+      if (savedBadges) {
+        setEarnedBadges(JSON.parse(savedBadges));
+      }
     } catch (e) {
-      console.error("Failed to load weekly data", e);
+      console.error("Failed to load data", e);
     }
   };
 
@@ -49,46 +103,38 @@ export default function ProgressScreen() {
     }
   };
 
-  const addData = () => {
-    if (!appName || !timeInMinutes || !week || !startTime || !endTime) {
-      Alert.alert("Error", "Please fill in all fields.");
-      return;
+  const saveBadges = async (badges) => {
+    try {
+      await AsyncStorage.setItem("earnedBadges", JSON.stringify(badges));
+    } catch (e) {
+      console.error("Failed to save badges", e);
     }
+  };
 
-    const minutes = parseInt(timeInMinutes, 10);
-    if (isNaN(minutes)) {
-      Alert.alert("Error", "Time must be a number.");
-      return;
-    }
-    const weekNumber = parseInt(week, 10);
-    if (isNaN(weekNumber)) {
-      Alert.alert("Error", "Week must be a number.");
-      return;
-    }
-
-    const newData = [
-      ...weeklyData,
-      {
-        id: Date.now().toString(),
-        week: weekNumber,
-        appName,
-        timeInMinutes: minutes,
-        startTime,
-        endTime,
-      },
-    ];
-
+  const logActivity = (newEntry) => {
+    const newData = [...weeklyData, newEntry];
     setWeeklyData(newData);
     saveWeeklyData(newData);
-    setAppName("");
-    setTimeInMinutes("");
-    setWeek("");
-    setStartTime("");
-    setEndTime("");
     Alert.alert(
       "Success",
-      `Data for Week ${weekNumber} has been added for ${appName}!`
+      `Data has been logged for Week ${newEntry.week} for ${newEntry.appName}!`
     );
+  };
+
+  const checkAndAwardBadges = (weeksLogged) => {
+    const newBadges = allBadges.filter(
+      (badge) =>
+        weeksLogged >= badge.criteria &&
+        !earnedBadges.some((b) => b.id === badge.id)
+    );
+
+    if (newBadges.length > 0) {
+      const updatedBadges = [...earnedBadges, ...newBadges];
+      setEarnedBadges(updatedBadges);
+      saveBadges(updatedBadges);
+      setBadgeToShare(newBadges[0]);
+      setShareModalVisible(true);
+    }
   };
 
   const showFutureFeatureAlert = () => {
@@ -134,106 +180,99 @@ export default function ProgressScreen() {
     weeklyData.length > 0 ? weeklyData[weeklyData.length - 1].week + 1 : 1;
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Your Progress</Text>
+    <SafeAreaView style={styles.safeAreaContainer}>
+      <ScrollView style={styles.container}>
+        <Text style={styles.title}>Your Progress</Text>
 
-      {/* Placeholder for the Graph */}
-      <View style={styles.graphPlaceholder}>
-        <Text style={styles.graphPlaceholderText}>
-          📊 A graph showing your screen time trends will appear here!
-        </Text>
-      </View>
-
-      <View style={styles.inputSection}>
-        <Text style={styles.subtitle}>Log Weekly App Use</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={`Current Week (e.g., ${nextWeekNumber})`}
-          keyboardType="numeric"
-          value={week}
-          onChangeText={setWeek}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="App Name (e.g., Instagram)"
-          value={appName}
-          onChangeText={setAppName}
-        />
-
-        <View style={styles.timeInputRow}>
-          <TextInput
-            style={[styles.input, styles.timeInput]}
-            placeholder="Start Time (e.g., 5:00 PM)"
-            value={startTime}
-            onChangeText={setStartTime}
-          />
-          <TextInput
-            style={[styles.input, styles.timeInput]}
-            placeholder="End Time (e.g., 8:00 PM)"
-            value={endTime}
-            onChangeText={setEndTime}
-          />
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Time in minutes (e.g., 120)"
-          keyboardType="numeric"
-          value={timeInMinutes}
-          onChangeText={setTimeInMinutes}
-        />
-        <View style={styles.actionButtons}>
-          <Button title="Add Data" onPress={addData} />
-          <Button title="Upload Screenshot" onPress={showFutureFeatureAlert} />
-        </View>
-        <Button
-          title="View All Logged Data"
-          onPress={() => setDataModalVisible(true)}
-          color="#333"
-        />
-      </View>
-
-      <View style={styles.progressSection}>
-        <Text style={styles.subtitle}>Screen Time Trends</Text>
-        {lastWeekData === null ? (
-          <Text style={styles.emptyText}>
-            No Instagram data yet. Add some to get started!
-          </Text>
-        ) : (
-          <View>
-            <Text style={styles.trendText}>
-              Last Week's Instagram Use (Week {lastWeekData.week}):{" "}
-              {lastWeekData.timeInMinutes} minutes
-            </Text>
-            {lastWeekData.startTime && lastWeekData.endTime && (
-              <Text style={styles.trendText}>
-                Typical Time: {lastWeekData.startTime} to {lastWeekData.endTime}
-              </Text>
-            )}
-            {calculateReduction() && (
-              <Text style={styles.trendText}>{calculateReduction()}</Text>
-            )}
-            <Text style={styles.trendText}>
-              Your data will be used to predict your habits and send timely
-              notifications.
+        <View style={styles.graphSection}>
+          <Text style={styles.subtitle}>Your Time In Each Subject</Text>
+          <View style={styles.graphPlaceholder}>
+            <Text style={styles.graphPlaceholderText}>
+              📊 A graph showing your screen time trends will appear here!
             </Text>
           </View>
-        )}
-      </View>
-      <DataModal
-        visible={dataModalVisible}
-        onClose={() => setDataModalVisible(false)}
-        data={weeklyData}
-      />
-    </ScrollView>
+        </View>
+
+        <View style={styles.inputSection}>
+          <Text style={styles.subtitle}>Log Weekly App Use</Text>
+          <Button
+            title="Log New Activity"
+            onPress={() => setLogModalVisible(true)}
+          />
+        </View>
+
+        <View style={styles.progressSection}>
+          <Text style={styles.subtitle}>Screen Time Trends</Text>
+          {lastWeekData === null ? (
+            <Text style={styles.emptyText}>
+              No Instagram data yet. Add some to get started!
+            </Text>
+          ) : (
+            <View>
+              <Text style={styles.trendText}>
+                Last Week's Instagram Use (Week {lastWeekData.week}):{" "}
+                {lastWeekData.timeInMinutes} minutes
+              </Text>
+              {lastWeekData.startTime && lastWeekData.endTime && (
+                <Text style={styles.trendText}>
+                  Typical Time: {lastWeekData.startTime} to{" "}
+                  {lastWeekData.endTime}
+                </Text>
+              )}
+              {calculateReduction() && (
+                <Text style={styles.trendText}>{calculateReduction()}</Text>
+              )}
+              <Text style={styles.trendText}>
+                Your data will be used to predict your habits and send timely
+                notifications.
+              </Text>
+            </View>
+          )}
+        </View>
+        <DataModal
+          visible={dataModalVisible}
+          onClose={() => setDataModalVisible(false)}
+          data={weeklyData}
+        />
+        <Modal
+          visible={achievementsModalVisible}
+          animationType="slide"
+          transparent
+        >
+          <View style={modalStyles.overlay}>
+            <View style={modalStyles.modalContainer}>
+              <Achievements badges={earnedBadges} />
+              <Button
+                title="Close"
+                onPress={() => setAchievementsModalVisible(false)}
+              />
+            </View>
+          </View>
+        </Modal>
+        <ShareAchievementModal
+          visible={shareModalVisible}
+          onClose={() => setShareModalVisible(false)}
+          badge={badgeToShare}
+        />
+        <LogActivityModal
+          visible={logModalVisible}
+          onClose={() => setLogModalVisible(false)}
+          onLog={logActivity}
+          nextWeekNumber={nextWeekNumber}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeAreaContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
   },
   title: {
     fontSize: 24,
@@ -301,5 +340,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "gray",
     fontStyle: "italic",
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContainer: {
+    width: "90%",
+    maxHeight: "80%",
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 20,
   },
 });

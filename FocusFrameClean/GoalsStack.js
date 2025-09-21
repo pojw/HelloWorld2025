@@ -8,17 +8,19 @@ const Stack = createNativeStackNavigator();
 
 export default function GoalsStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="GoalsMain"
-        component={GoalsScreen}
-        options={{ title: "Goals" }}
-      />
-      <Stack.Screen
-        name="GoalDetails"
-        component={GoalDetailsScreen}
-        options={{ title: "Goal Details" }}
-      />
-    </Stack.Navigator>
+    <GoalsProvider>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="GoalsScreen"
+          component={GoalsScreen}
+          options={{ title: "Goals", headerShown: false }}
+        />
+        <Stack.Screen
+          name="GoalDetails"
+          component={GoalDetailsScreen}
+          options={{ title: "Goal Details" }}
+        />
+      </Stack.Navigator>
+    </GoalsProvider>
   );
 }

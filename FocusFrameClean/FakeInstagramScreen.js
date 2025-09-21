@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  SafeAreaView, // Import SafeAreaView
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -125,46 +126,51 @@ export default function FakeInstagramScreen() {
   const notifPhotoMessage = userPhotos.length > 0 ? userPhotos[0] : null;
 
   return (
-    <View style={instaStyles.container}>
-      <FakeNotification
-        visible={showNotification}
-        photoMessage={notifPhotoMessage}
-      />
+    <SafeAreaView style={instaStyles.safeAreaContainer}>
+      <View style={instaStyles.container}>
+        <FakeNotification
+          visible={showNotification}
+          photoMessage={notifPhotoMessage}
+        />
 
-      <View style={instaStyles.topNav}>
-        <Ionicons name="camera-outline" size={28} color="black" />
-        <Text style={instaStyles.logoText}>Instagram</Text>
-        <Ionicons name="send-outline" size={28} color="black" />
+        <View style={instaStyles.topNav}>
+          <Ionicons name="camera-outline" size={28} color="black" />
+          <Text style={instaStyles.logoText}>Instagram</Text>
+          <Ionicons name="send-outline" size={28} color="black" />
+        </View>
+
+        <ScrollView>
+          <InstaPost
+            profilePic="https://images.unsplash.com/photo-1549048375-f982a20b22f2?auto=format&fit=crop&q=80&w=2070&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            username="traveler_adventures"
+            postImage={DoomScrolling1}
+            likes="1,234"
+          />
+          <InstaPost
+            profilePic="https://images.unsplash.com/photo-1533261204642-c2e8a1d13781?auto=format&fit=crop&q=80&w=1964&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            username="foodie_finds"
+            postImage={DoomScrolling2}
+            likes="987"
+          />
+          <InstaPost
+            profilePic="https://images.unsplash.com/photo-1506794834888-c7d918361093?auto=format&fit=crop&q=80&w=1974&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            username="daily_inspiration"
+            postImage={DoomScrolling3}
+            likes="567"
+          />
+        </ScrollView>
       </View>
-
-      <ScrollView>
-        <InstaPost
-          profilePic="https://images.unsplash.com/photo-1549048375-f982a20b22f2?auto=format&fit=crop&q=80&w=2070&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          username="traveler_adventures"
-          postImage={DoomScrolling1}
-          likes="1,234"
-        />
-        <InstaPost
-          profilePic="https://images.unsplash.com/photo-1533261204642-c2e8a1d13781?auto=format&fit=crop&q=80&w=1964&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          username="foodie_finds"
-          postImage={DoomScrolling2}
-          likes="987"
-        />
-        <InstaPost
-          profilePic="https://images.unsplash.com/photo-1506794834888-c7d918361093?auto=format&fit=crop&q=80&w=1974&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          username="daily_inspiration"
-          postImage={DoomScrolling3}
-          likes="567"
-        />
-      </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const instaStyles = StyleSheet.create({
-  container: {
+  safeAreaContainer: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  container: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

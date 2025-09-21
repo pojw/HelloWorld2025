@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AddClassModal from "./AddClassModal";
@@ -17,6 +18,23 @@ import {
 } from "./ScheduleUtils";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { initialScheduleData } from "./InitialSchedule";
+
+// Helper function to get a color based on event type
+const getEventTypeColor = (eventType) => {
+  switch (eventType) {
+    case "Study":
+      return "#e6b0a9"; // Light Red
+    case "Workout":
+      return "#a9d0a6"; // Light Green
+    case "Sleep":
+      return "#b0c4de"; // Light Purple
+    case "Class":
+      return "#f5e6b1"; // Light Yellow
+    default:
+      return "#f0f0f0"; // Light Gray
+  }
+};
 
 export default function ScheduleScreen() {
   const navigation = useNavigation();
@@ -25,9 +43,8 @@ export default function ScheduleScreen() {
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [currentActivity, setCurrentActivity] = useState(null);
-  const [storedPhotos, setStoredPhotos] = useState([]); // New state for photos
+  const [storedPhotos, setStoredPhotos] = useState([]);
 
-  // Load photos from AsyncStorage on mount
   useEffect(() => {
     const fetchPhotos = async () => {
       const saved = await AsyncStorage.getItem("photos");
@@ -41,7 +58,13 @@ export default function ScheduleScreen() {
   useEffect(() => {
     const fetchSchedule = async () => {
       const storedSchedule = await loadSchedule();
-      setSchedule(storedSchedule);
+
+      if (storedSchedule.length === 0) {
+        await saveSchedule(initialScheduleData);
+        setSchedule(initialScheduleData);
+      } else {
+        setSchedule(storedSchedule);
+      }
     };
     fetchSchedule();
   }, []);
@@ -50,26 +73,21 @@ export default function ScheduleScreen() {
     saveSchedule(schedule);
   }, [schedule]);
 
-  // Check the schedule every minute to find the current activity
   useEffect(() => {
     const checkSchedule = async () => {
       const activity = await findCurrentActivity();
       setCurrentActivity(activity);
 
-      // Here is where you would integrate the photo logic
       if (activity) {
         console.log(
           "Currently scheduled for:",
           activity.name || activity.eventType
         );
 
-        // This is a simplified check. In your hackathon demo,
-        // you would navigate to FakeInstagramScreen with this data.
         if (storedPhotos.length > 0) {
           const randomIndex = Math.floor(Math.random() * storedPhotos.length);
           const randomPhoto = storedPhotos[randomIndex];
-          // You can use a state to pass this data to FakeInstagramScreen
-          // or navigate and pass it as a parameter:
+          // Example of how you could navigate with data:
           // navigation.navigate('FakeInstagram', { activity, photo: randomPhoto });
         }
       } else {
@@ -81,7 +99,7 @@ export default function ScheduleScreen() {
     checkSchedule();
 
     return () => clearInterval(intervalId);
-  }, [storedPhotos, schedule]); // Added storedPhotos to the dependency array
+  }, [storedPhotos, schedule]);
 
   const addClass = (newClass) => {
     setSchedule((prevSchedule) => [
@@ -131,7 +149,11 @@ export default function ScheduleScreen() {
     <View
       style={[
         styles.item,
-        item.type === "class" ? styles.classItem : styles.eventItem,
+        {
+          backgroundColor: getEventTypeColor(
+            item.type === "class" ? "Class" : item.eventType
+          ),
+        },
       ]}
     >
       <View style={{ flex: 1 }}>
@@ -169,114 +191,123 @@ export default function ScheduleScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Weekly Schedule</Text>
+    <SafeAreaView style={styles.safeAreaContainer}>
+      <ScrollView style={styles.container}>
+        <Text style={styles.title}>Weekly Schedule</Text>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Classes</Text>
-        {classes.length === 0 ? (
-          <Text style={styles.emptyText}>No classes scheduled.</Text>
-        ) : (
-          <FlatList
-            data={classes}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            scrollEnabled={false}
-          />
-        )}
-      </View>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Classes</Text>
+          {classes.length === 0 ? (
+            <Text style={styles.emptyText}>No classes scheduled.</Text>
+          ) : (
+            <FlatList
+              data={classes}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Sleep</Text>
-        {sleepEvents.length === 0 ? (
-          <Text style={styles.emptyText}>No sleep schedules.</Text>
-        ) : (
-          <FlatList
-            data={sleepEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            scrollEnabled={false}
-          />
-        )}
-      </View>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Sleep</Text>
+          {sleepEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No sleep schedules.</Text>
+          ) : (
+            <FlatList
+              data={sleepEvents}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Study</Text>
-        {studyEvents.length === 0 ? (
-          <Text style={styles.emptyText}>No study sessions.</Text>
-        ) : (
-          <FlatList
-            data={studyEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            scrollEnabled={false}
-          />
-        )}
-      </View>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Study</Text>
+          {studyEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No study sessions.</Text>
+          ) : (
+            <FlatList
+              data={studyEvents}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Workout</Text>
-        {workoutEvents.length === 0 ? (
-          <Text style={styles.emptyText}>No workouts scheduled.</Text>
-        ) : (
-          <FlatList
-            data={workoutEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            scrollEnabled={false}
-          />
-        )}
-      </View>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Workout</Text>
+          {workoutEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No workouts scheduled.</Text>
+          ) : (
+            <FlatList
+              data={workoutEvents}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Other Events</Text>
-        {otherEvents.length === 0 ? (
-          <Text style={styles.emptyText}>No other events.</Text>
-        ) : (
-          <FlatList
-            data={otherEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            scrollEnabled={false}
-          />
-        )}
-      </View>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Other Events</Text>
+          {otherEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No other events.</Text>
+          ) : (
+            <FlatList
+              data={otherEvents}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
 
-      <View style={styles.buttonsRow}>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setClassModalVisible(true)}
-        >
-          <Text style={styles.addButtonText}>Add Class</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setEventModalVisible(true)}
-        >
-          <Text style={styles.addButtonText}>Add Event</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setClassModalVisible(true)}
+          >
+            <Text style={styles.addButtonText}>Add Class</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setEventModalVisible(true)}
+          >
+            <Text style={styles.addButtonText}>Add Event</Text>
+          </TouchableOpacity>
+        </View>
 
-      <AddClassModal
-        visible={classModalVisible}
-        onClose={handleCloseModals}
-        onAdd={addClass}
-        onUpdate={updateItem}
-        itemToEdit={editingItem}
-      />
-      <AddEventModal
-        visible={eventModalVisible}
-        onClose={handleCloseModals}
-        onAdd={addEvent}
-        onUpdate={updateItem}
-        eventToEdit={editingItem}
-      />
-    </ScrollView>
+        <AddClassModal
+          visible={classModalVisible}
+          onClose={handleCloseModals}
+          onAdd={addClass}
+          onUpdate={updateItem}
+          itemToEdit={editingItem}
+        />
+        <AddEventModal
+          visible={eventModalVisible}
+          onClose={handleCloseModals}
+          onAdd={addEvent}
+          onUpdate={updateItem}
+          eventToEdit={editingItem}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  safeAreaContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   sectionContainer: { marginBottom: 20 },
   sectionTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },

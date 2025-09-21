@@ -1,17 +1,63 @@
 // aiHelper.js
-export const generateMiniMessage = (description) => {
-  // Basic keyword-based "AI"
-  const lower = description.toLowerCase();
 
-  if (lower.includes("dad") || lower.includes("father")) {
-    return "Remember, your dad works hard outside every day!";
+/**
+ * Simulates an AI generating a personalized message based on a photo description.
+ * This is a simplified function for a hackathon demo.
+ * @param {string} description The user's description of the photo.
+ * @returns {string} An AI-generated message.
+ */
+export const generateMiniMessage = (description) => {
+  const desc = description.toLowerCase();
+
+  // Keywords related to family and relationships
+  if (
+    desc.includes("mom") ||
+    desc.includes("mother") ||
+    desc.includes("dad") ||
+    desc.includes("father") ||
+    desc.includes("parent")
+  ) {
+    return "This is a reminder of your family's support. They're proud of you and your hard work.";
   }
-  if (lower.includes("mom")) {
-    return "Think about how your mom supports you every day!";
+  if (
+    desc.includes("sister") ||
+    desc.includes("brother") ||
+    desc.includes("sibling") ||
+    desc.includes("family")
+  ) {
+    return "Remember this good time with your family? Make sure you take a break to enjoy more moments like this.";
   }
-  if (lower.includes("study")) {
-    return "Keep going! Studying now pays off later!";
+  if (
+    desc.includes("friends") ||
+    desc.includes("squad") ||
+    desc.includes("bff")
+  ) {
+    return "Don't let your friends miss out on your journey! Keep going, you're an inspiration.";
   }
-  // Default
-  return "This is an important moment for you—keep it in mind!";
+
+  // Keywords related to emotions or challenges
+  if (
+    desc.includes("struggling") ||
+    desc.includes("poor") ||
+    desc.includes("difficult")
+  ) {
+    return "This journey is tough, but so are you. Remember this photo as a reminder of your strength.";
+  }
+
+  // Keywords related to pets
+  if (desc.includes("dog") || desc.includes("cat") || desc.includes("pet")) {
+    return "Your furry friend is waiting for you. Don't lose track of time!";
+  }
+
+  // Keywords related to work and goals
+  if (
+    desc.includes("studying") ||
+    desc.includes("project") ||
+    desc.includes("hard work")
+  ) {
+    return "That hard work is what will get you to your goals. You've got this!";
+  }
+
+  // Default message if no keywords are found
+  return "This photo is a reminder of what truly matters to you. Stay on track!";
 };

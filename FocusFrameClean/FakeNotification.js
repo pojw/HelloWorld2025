@@ -20,7 +20,7 @@ export default function FakeNotification({ visible, photoMessage }) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    top: -30, // tweak this to move banner lower/higher
+    top: 50, // This value moves the banner down from the top of the screen
     left: 10,
     right: 10,
     backgroundColor: "rgba(0,0,0,0.9)",
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   image: {
-    width: 50, // slightly bigger image
+    width: 50,
     height: 60,
     borderRadius: 8,
     marginRight: 12,
