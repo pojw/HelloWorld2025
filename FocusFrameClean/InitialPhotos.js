@@ -10,7 +10,7 @@ export const initialPhotosData = [
   {
     id: "photo_2",
     uri: "https://images.unsplash.com/photo-1546410531-bb448658d55a?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=600&q=80&w=800",
-    description: "My dog, Fido. He's so happy when I'm home.",
+    description: "My dog, Fido. He's so happy when I'm home!!",
     aiMessage:
       "Your furry friend is waiting for you. Don't lose track of time!!",
   },
