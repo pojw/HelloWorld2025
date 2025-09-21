@@ -1,48 +1,41 @@
-import React, { useState } from "react";
+// App.js
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
 
 import GoalsScreen from "./GoalsScreen";
+import GoalDetailsScreen from "./GoalDetailsScreen";
 import PhotosScreen from "./PhotosScreen";
 import ProgressScreen from "./ProgressScreen";
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+function GoalsStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="GoalsMain"
+        component={GoalsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="GoalDetails"
+        component={GoalDetailsScreen}
+        options={{ headerTitle: "Goal Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
-  const [goal, setGoal] = useState("");
-  const [steps, setSteps] = useState([]);
-  const [progressData, setProgressData] = useState([]);
-
-  const generateSteps = () => {
-    const predefinedSteps = {
-      "Learn Web Development": [
-        "Step 1: Learn HTML basics",
-        "Step 2: Practice paragraphs and headings",
-        "Step 3: Learn CSS layout",
-        "Step 4: Small projects",
-        "Step 5: Learn JavaScript basics",
-      ],
-    };
-    setSteps(predefinedSteps[goal] || ["Start with small steps!"]);
-  };
-
   return (
     <NavigationContainer>
       <Tab.Navigator>
-        <Tab.Screen name="Goals">
-          {() => (
-            <GoalsScreen
-              goal={goal}
-              setGoal={setGoal}
-              steps={steps}
-              generateSteps={generateSteps}
-            />
-          )}
-        </Tab.Screen>
+        <Tab.Screen name="Goals" component={GoalsStack} />
         <Tab.Screen name="Photos" component={PhotosScreen} />
-        <Tab.Screen name="Progress">
-          {() => <ProgressScreen progressData={progressData} />}
-        </Tab.Screen>
+        <Tab.Screen name="Progress" component={ProgressScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );
