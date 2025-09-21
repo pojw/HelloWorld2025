@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import FakeNotification from "./FakeNotification";
 import { generateMiniMessage } from "./aiHelper";
 
-export default function PhotoScreen() {
+export default function PhotosScreen() {
   const [photos, setPhotos] = useState([]);
   const [description, setDescription] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
@@ -48,13 +48,15 @@ export default function PhotoScreen() {
   const addPhoto = async () => {
     if (!selectedImage || !description.trim()) return;
 
+    // Create a temporary array to hold the new state
+    let updatedPhotos;
+
     if (editingId) {
-      const updatedPhotos = photos.map((p) =>
+      updatedPhotos = photos.map((p) =>
         p.id === editingId
           ? { ...p, description, aiMessage: generateMiniMessage(description) }
           : p
       );
-      setPhotos(updatedPhotos);
       setEditingId(null);
     } else {
       const newPhoto = {
@@ -63,12 +65,15 @@ export default function PhotoScreen() {
         description,
         aiMessage: generateMiniMessage(description),
       };
-      setPhotos([...photos, newPhoto]);
+      updatedPhotos = [...photos, newPhoto];
     }
+
+    // Update the state and save to AsyncStorage
+    setPhotos(updatedPhotos);
+    await AsyncStorage.setItem("photos", JSON.stringify(updatedPhotos));
 
     setSelectedImage(null);
     setDescription("");
-    await AsyncStorage.setItem("photos", JSON.stringify(photos));
   };
 
   const editPhoto = (photo) => {

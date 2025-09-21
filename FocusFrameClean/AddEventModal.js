@@ -105,7 +105,7 @@ export default function AddEventModal({
       id: eventToEdit ? eventToEdit.id : Date.now().toString(),
       name: selectedType === "Other" ? customType : selectedType,
       eventType: selectedType,
-      type: "event", // This ensures it's correctly identified in the schedule
+      type: "event",
       startTime: `${startHour}:${startMinute} ${startAMPM}`,
       endTime: `${endHour}:${endMinute} ${endAMPM}`,
       days: Object.keys(selectedDays).filter((d) => selectedDays[d]),
@@ -126,7 +126,6 @@ export default function AddEventModal({
           <Text style={styles.title}>
             {eventToEdit ? "Edit Event" : "Add Event"}
           </Text>
-
           <Text style={styles.subtitle}>Event Type</Text>
           <View style={styles.typeRow}>
             {eventTypes.map((type) => (
@@ -146,7 +145,6 @@ export default function AddEventModal({
               </TouchableOpacity>
             ))}
           </View>
-
           {selectedType === "Other" && (
             <TextInput
               style={styles.input}
@@ -155,21 +153,18 @@ export default function AddEventModal({
               onChangeText={setCustomType}
             />
           )}
-
           <Text style={styles.subtitle}>Start Time</Text>
           <View style={styles.timeRow}>
             {renderPicker(hours, startHour, setStartHour)}
             {renderPicker(minutes, startMinute, setStartMinute)}
             {renderPicker(ampm, startAMPM, setStartAMPM)}
           </View>
-
           <Text style={styles.subtitle}>End Time</Text>
           <View style={styles.timeRow}>
             {renderPicker(hours, endHour, setEndHour)}
             {renderPicker(minutes, endMinute, setEndMinute)}
             {renderPicker(ampm, endAMPM, setEndAMPM)}
           </View>
-
           <Text style={styles.subtitle}>Select Days</Text>
           <View style={styles.daysRow}>
             {daysOfWeek.map((day) => (
@@ -187,7 +182,6 @@ export default function AddEventModal({
               </TouchableOpacity>
             ))}
           </View>
-
           <View style={styles.buttonContainer}>
             <Button
               title={eventToEdit ? "Update Event" : "Add Event"}

@@ -1,3 +1,4 @@
+// FakeNotification.js
 import React from "react";
 import { View, Text, Image, StyleSheet, Animated } from "react-native";
 

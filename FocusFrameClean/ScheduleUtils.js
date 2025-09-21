@@ -1,4 +1,3 @@
-// ScheduleUtils.js
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Helper function to convert 12-hour time to 24-hour time in minutes

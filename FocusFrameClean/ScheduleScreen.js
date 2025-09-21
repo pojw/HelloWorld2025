@@ -15,17 +15,29 @@ import {
   loadSchedule,
   findCurrentActivity,
 } from "./ScheduleUtils";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ScheduleScreen() {
+  const navigation = useNavigation();
   const [schedule, setSchedule] = useState([]);
   const [classModalVisible, setClassModalVisible] = useState(false);
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
-  // New state to hold the current scheduled activity
   const [currentActivity, setCurrentActivity] = useState(null);
+  const [storedPhotos, setStoredPhotos] = useState([]); // New state for photos
 
-  // Load schedule on app start
+  // Load photos from AsyncStorage on mount
+  useEffect(() => {
+    const fetchPhotos = async () => {
+      const saved = await AsyncStorage.getItem("photos");
+      if (saved) {
+        setStoredPhotos(JSON.parse(saved));
+      }
+    };
+    fetchPhotos();
+  }, []);
+
   useEffect(() => {
     const fetchSchedule = async () => {
       const storedSchedule = await loadSchedule();
@@ -34,11 +46,8 @@ export default function ScheduleScreen() {
     fetchSchedule();
   }, []);
 
-  // Save schedule whenever it changes
   useEffect(() => {
-    if (schedule.length > 0) {
-      saveSchedule(schedule);
-    }
+    saveSchedule(schedule);
   }, [schedule]);
 
   // Check the schedule every minute to find the current activity
@@ -47,13 +56,22 @@ export default function ScheduleScreen() {
       const activity = await findCurrentActivity();
       setCurrentActivity(activity);
 
-      // THIS IS WHERE YOU WILL ADD YOUR USAGE TRACKING LOGIC
-      // Based on `activity`, you can decide which fake notification to show.
+      // Here is where you would integrate the photo logic
       if (activity) {
         console.log(
           "Currently scheduled for:",
           activity.name || activity.eventType
         );
+
+        // This is a simplified check. In your hackathon demo,
+        // you would navigate to FakeInstagramScreen with this data.
+        if (storedPhotos.length > 0) {
+          const randomIndex = Math.floor(Math.random() * storedPhotos.length);
+          const randomPhoto = storedPhotos[randomIndex];
+          // You can use a state to pass this data to FakeInstagramScreen
+          // or navigate and pass it as a parameter:
+          // navigation.navigate('FakeInstagram', { activity, photo: randomPhoto });
+        }
       } else {
         console.log("No activity currently scheduled.");
       }
@@ -63,7 +81,7 @@ export default function ScheduleScreen() {
     checkSchedule();
 
     return () => clearInterval(intervalId);
-  }, []); // Note: Removed 'schedule' from dependencies to prevent excessive re-renders.
+  }, [storedPhotos, schedule]); // Added storedPhotos to the dependency array
 
   const addClass = (newClass) => {
     setSchedule((prevSchedule) => [

@@ -35,9 +35,7 @@ export default function AddClassModal({
 
   useEffect(() => {
     if (itemToEdit) {
-      // Set form state based on the item being edited
       setName(itemToEdit.name);
-      // Logic to parse and set time and day states
       const [start, startPart] = itemToEdit.startTime.split(" ");
       const [end, endPart] = itemToEdit.endTime.split(" ");
       const [startH, startM] = start.split(":");
@@ -56,7 +54,6 @@ export default function AddClassModal({
       );
       setSelectedDays(daysMap);
     } else {
-      // Reset form if no item to edit
       setName("");
       setStartHour(8);
       setStartMinute("00");
@@ -68,7 +65,7 @@ export default function AddClassModal({
         daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
       );
     }
-  }, [itemToEdit]); // Dependency array ensures this runs when itemToEdit changes
+  }, [itemToEdit]);
 
   const toggleDay = (day) =>
     setSelectedDays({ ...selectedDays, [day]: !selectedDays[day] });
@@ -122,7 +119,6 @@ export default function AddClassModal({
           <Text style={styles.title}>
             {itemToEdit ? "Edit Class" : "Add Class"}
           </Text>
-
           <Text style={styles.subtitle}>Class Name</Text>
           <View style={{ marginBottom: 10 }}>
             <TextInput
@@ -132,21 +128,18 @@ export default function AddClassModal({
               onChangeText={setName}
             />
           </View>
-
           <Text style={styles.subtitle}>Start Time</Text>
           <View style={styles.timeRow}>
             {renderPicker(hours, startHour, setStartHour)}
             {renderPicker(minutes, startMinute, setStartMinute)}
             {renderPicker(ampm, startAMPM, setStartAMPM)}
           </View>
-
           <Text style={styles.subtitle}>End Time</Text>
           <View style={styles.timeRow}>
             {renderPicker(hours, endHour, setEndHour)}
             {renderPicker(minutes, endMinute, setEndMinute)}
             {renderPicker(ampm, endAMPM, setEndAMPM)}
           </View>
-
           <Text style={styles.subtitle}>Select Days</Text>
           <View style={styles.daysRow}>
             {daysOfWeek.map((day) => (
@@ -164,7 +157,6 @@ export default function AddClassModal({
               </TouchableOpacity>
             ))}
           </View>
-
           <Button
             title={itemToEdit ? "Update Class" : "Add Class"}
             onPress={handleSave}
