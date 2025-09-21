@@ -5,7 +5,8 @@ export const initialPhotosData = [
     id: "photo_1",
     uri: "https://images.unsplash.com/photo-1543269826-b816a4e32d67?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=600&q=80&w=800",
     description: "My dad at work. He's my inspiration.",
-    aiMessage: "Your dad is proud of you and all your hard work. Stay focused!",
+    aiMessage:
+      "Your dad is proud of you and all your hard work. Stay focused!!",
   },
   {
     id: "photo_2",
