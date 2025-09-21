@@ -92,7 +92,6 @@ export default function GoalsScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Input row */}
-      {/* Input row */}
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
@@ -100,7 +99,7 @@ export default function GoalsScreen({ navigation }) {
           value={input}
           onChangeText={setInput}
           onSubmitEditing={addGoal} // ✅ Press Enter to add goal
-          returnKeyType="done" // Shows “Done” on keyboard
+          returnKeyType="done"
         />
         <TouchableOpacity
           style={styles.priorityButton}
@@ -148,7 +147,7 @@ export default function GoalsScreen({ navigation }) {
             <TouchableOpacity
               style={[
                 styles.goalItem,
-                { borderColor: priorityColors[item.priority] }, // only goal border
+                { borderColor: priorityColors[item.priority] },
               ]}
               onPress={() =>
                 navigation.navigate("GoalDetails", {
@@ -165,11 +164,21 @@ export default function GoalsScreen({ navigation }) {
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.goalText}>{item.text}</Text>
-                <Progress.Bar progress={progress} width={null} color="green" />
+                <Progress.Bar
+                  progress={progress}
+                  width={250} // smaller width
+                  color="green"
+                  borderRadius={5}
+                  height={8} // keep thickness
+                />
               </View>
               <View style={styles.actions}>
-                <Button title="Edit" onPress={() => editGoal(item)} />
-                <Button title="Delete" onPress={() => deleteGoal(item.id)} />
+                <TouchableOpacity onPress={() => editGoal(item)}>
+                  <Ionicons name="create-outline" size={22} color="black" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => deleteGoal(item.id)}>
+                  <Ionicons name="trash-outline" size={22} color="red" />
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           );
