@@ -1,23 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
+  Modal,
   View,
   Text,
   TouchableOpacity,
-  Button,
-  StyleSheet,
-  Modal,
   ScrollView,
+  TextInput,
+  StyleSheet,
+  Button,
 } from "react-native";
 
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const eventTypes = ["Sleep", "Study", "Workout", "Relax", "Other"];
-const hours = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
+const hours = Array.from({ length: 12 }, (_, i) => i + 1);
 const minutes = ["00", "15", "30", "45"];
 const ampm = ["AM", "PM"];
+const eventTypes = ["Sleep", "Study", "Workout", "Relax", "Other"];
 
-export default function AddEventModal({ visible, onClose, onAdd }) {
-  const [eventType, setEventType] = useState("");
-  const [customName, setCustomName] = useState("");
+export default function AddEventModal({
+  visible,
+  onClose,
+  onAdd,
+  onUpdate,
+  eventToEdit,
+}) {
+  const [selectedType, setSelectedType] = useState("Sleep");
+  const [customType, setCustomType] = useState("");
   const [startHour, setStartHour] = useState(8);
   const [startMinute, setStartMinute] = useState("00");
   const [startAMPM, setStartAMPM] = useState("AM");
@@ -28,38 +35,45 @@ export default function AddEventModal({ visible, onClose, onAdd }) {
     daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
   );
 
+  useEffect(() => {
+    if (eventToEdit) {
+      setSelectedType(eventToEdit.eventType);
+      setCustomType(eventToEdit.eventType === "Other" ? eventToEdit.name : "");
+
+      const [sTime, sAmPm] = eventToEdit.startTime.split(" ");
+      const [sHour, sMin] = sTime.split(":");
+      setStartHour(parseInt(sHour));
+      setStartMinute(sMin);
+      setStartAMPM(sAmPm);
+
+      const [eTime, eAmPm] = eventToEdit.endTime.split(" ");
+      const [eHour, eMin] = eTime.split(":");
+      setEndHour(parseInt(eHour));
+      setEndMinute(eMin);
+      setEndAMPM(eAmPm);
+
+      const initialSelectedDays = daysOfWeek.reduce(
+        (acc, day) => ({ ...acc, [day]: eventToEdit.days.includes(day) }),
+        {}
+      );
+      setSelectedDays(initialSelectedDays);
+    } else {
+      setSelectedType("Sleep");
+      setCustomType("");
+      setStartHour(8);
+      setStartMinute("00");
+      setStartAMPM("AM");
+      setEndHour(9);
+      setEndMinute("00");
+      setEndAMPM("AM");
+      setSelectedDays(
+        daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
+      );
+    }
+  }, [eventToEdit, visible]);
+
   const toggleDay = (day) =>
     setSelectedDays({ ...selectedDays, [day]: !selectedDays[day] });
-
-  const formatTime = (h, m, a) => `${h}:${m} ${a}`;
-
-  const handleAdd = () => {
-    if (!eventType || !startHour || !endHour) return;
-    const name = eventType === "Other" ? customName : eventType;
-    const newEvent = {
-      id: Date.now().toString(),
-      name,
-      startTime: formatTime(startHour, startMinute, startAMPM),
-      endTime: formatTime(endHour, endMinute, endAMPM),
-      eventType,
-      days: Object.keys(selectedDays).filter((d) => selectedDays[d]),
-    };
-    onAdd(newEvent);
-
-    // reset
-    setEventType("");
-    setCustomName("");
-    setStartHour(8);
-    setStartMinute("00");
-    setStartAMPM("AM");
-    setEndHour(9);
-    setEndMinute("00");
-    setEndAMPM("AM");
-    setSelectedDays(
-      daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
-    );
-    onClose();
-  };
 
   const renderPicker = (values, selected, setSelected) => (
     <ScrollView
@@ -81,42 +95,65 @@ export default function AddEventModal({ visible, onClose, onAdd }) {
     </ScrollView>
   );
 
+  const handleSave = () => {
+    if (selectedType === "Other" && !customType) {
+      alert("Please enter a custom event name.");
+      return;
+    }
+
+    const eventData = {
+      id: eventToEdit ? eventToEdit.id : Date.now().toString(),
+      name: selectedType === "Other" ? customType : selectedType,
+      eventType: selectedType,
+      type: "event", // This ensures it's correctly identified in the schedule
+      startTime: `${startHour}:${startMinute} ${startAMPM}`,
+      endTime: `${endHour}:${endMinute} ${endAMPM}`,
+      days: Object.keys(selectedDays).filter((d) => selectedDays[d]),
+    };
+
+    if (eventToEdit) {
+      onUpdate(eventData);
+    } else {
+      onAdd(eventData);
+    }
+    onClose();
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.content}>
-          <Text style={styles.title}>Add Event</Text>
+          <Text style={styles.title}>
+            {eventToEdit ? "Edit Event" : "Add Event"}
+          </Text>
 
           <Text style={styles.subtitle}>Event Type</Text>
-          <View style={styles.eventTypeRow}>
+          <View style={styles.typeRow}>
             {eventTypes.map((type) => (
               <TouchableOpacity
                 key={type}
                 style={[
                   styles.typeButton,
-                  eventType === type && styles.typeSelected,
+                  selectedType === type && styles.typeSelected,
                 ]}
-                onPress={() => setEventType(type)}
+                onPress={() => setSelectedType(type)}
               >
-                <Text style={{ color: eventType === type ? "#fff" : "#000" }}>
+                <Text
+                  style={{ color: selectedType === type ? "#fff" : "#000" }}
+                >
                   {type}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {eventType === "Other" && (
-            <View style={{ marginBottom: 10 }}>
-              <Text style={{ marginBottom: 5 }}>Custom Name</Text>
-              <TouchableOpacity style={styles.typeButton} onPress={() => {}}>
-                <TextInput
-                  style={{ padding: 5 }}
-                  placeholder="Enter name"
-                  value={customName}
-                  onChangeText={setCustomName}
-                />
-              </TouchableOpacity>
-            </View>
+          {selectedType === "Other" && (
+            <TextInput
+              style={styles.input}
+              placeholder="Enter custom type"
+              value={customType}
+              onChangeText={setCustomType}
+            />
           )}
 
           <Text style={styles.subtitle}>Start Time</Text>
@@ -151,8 +188,13 @@ export default function AddEventModal({ visible, onClose, onAdd }) {
             ))}
           </View>
 
-          <Button title="Add Event" onPress={handleAdd} />
-          <Button title="Cancel" color="red" onPress={onClose} />
+          <View style={styles.buttonContainer}>
+            <Button
+              title={eventToEdit ? "Update Event" : "Add Event"}
+              onPress={handleSave}
+            />
+            <Button title="Cancel" color="red" onPress={onClose} />
+          </View>
         </View>
       </View>
     </Modal>
@@ -173,6 +215,16 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   subtitle: { fontSize: 16, fontWeight: "bold", marginVertical: 10 },
+  typeRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
+  typeButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#2196F3",
+    borderRadius: 5,
+    marginRight: 5,
+    marginBottom: 5,
+  },
+  typeSelected: { backgroundColor: "#2196F3" },
   daysRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
   dayButton: {
     padding: 8,
@@ -183,16 +235,6 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   daySelected: { backgroundColor: "#2196F3" },
-  eventTypeRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
-  typeButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#2196F3",
-    borderRadius: 5,
-    marginRight: 5,
-    marginBottom: 5,
-  },
-  typeSelected: { backgroundColor: "#2196F3" },
   timeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -208,4 +250,16 @@ const styles = StyleSheet.create({
   },
   pickerItem: { padding: 10, alignItems: "center" },
   pickerItemSelected: { backgroundColor: "#2196F3", borderRadius: 5 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 10,
+  },
+  buttonContainer: {
+    marginTop: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
 });

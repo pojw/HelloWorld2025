@@ -1,24 +1,113 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Modal,
+  ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AddClassModal from "./AddClassModal";
 import AddEventModal from "./AddEventModal";
+import {
+  saveSchedule,
+  loadSchedule,
+  findCurrentActivity,
+} from "./ScheduleUtils";
 
 export default function ScheduleScreen() {
   const [schedule, setSchedule] = useState([]);
   const [classModalVisible, setClassModalVisible] = useState(false);
   const [eventModalVisible, setEventModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
-  const addClass = (newClass) =>
-    setSchedule([...schedule, { ...newClass, type: "class" }]);
-  const addEvent = (newEvent) =>
-    setSchedule([...schedule, { ...newEvent, type: "event" }]);
+  // New state to hold the current scheduled activity
+  const [currentActivity, setCurrentActivity] = useState(null);
+
+  // Load schedule on app start
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      const storedSchedule = await loadSchedule();
+      setSchedule(storedSchedule);
+    };
+    fetchSchedule();
+  }, []);
+
+  // Save schedule whenever it changes
+  useEffect(() => {
+    if (schedule.length > 0) {
+      saveSchedule(schedule);
+    }
+  }, [schedule]);
+
+  // Check the schedule every minute to find the current activity
+  useEffect(() => {
+    const checkSchedule = async () => {
+      const activity = await findCurrentActivity();
+      setCurrentActivity(activity);
+
+      // THIS IS WHERE YOU WILL ADD YOUR USAGE TRACKING LOGIC
+      // Based on `activity`, you can decide which fake notification to show.
+      if (activity) {
+        console.log(
+          "Currently scheduled for:",
+          activity.name || activity.eventType
+        );
+      } else {
+        console.log("No activity currently scheduled.");
+      }
+    };
+
+    const intervalId = setInterval(checkSchedule, 60000);
+    checkSchedule();
+
+    return () => clearInterval(intervalId);
+  }, []); // Note: Removed 'schedule' from dependencies to prevent excessive re-renders.
+
+  const addClass = (newClass) => {
+    setSchedule((prevSchedule) => [
+      ...prevSchedule,
+      { ...newClass, type: "class" },
+    ]);
+  };
+
+  const addEvent = (newEvent) => {
+    setSchedule((prevSchedule) => [
+      ...prevSchedule,
+      { ...newEvent, type: "event" },
+    ]);
+  };
+
+  const deleteItem = (id) => {
+    setSchedule((prevSchedule) =>
+      prevSchedule.filter((item) => item.id !== id)
+    );
+  };
+
+  const startEditItem = (item) => {
+    setEditingItem(item);
+    if (item.type === "class") {
+      setClassModalVisible(true);
+    } else {
+      setEventModalVisible(true);
+    }
+  };
+
+  const updateItem = (updatedItem) => {
+    setSchedule((prevSchedule) =>
+      prevSchedule.map((item) =>
+        item.id === updatedItem.id ? updatedItem : item
+      )
+    );
+    handleCloseModals();
+  };
+
+  const handleCloseModals = () => {
+    setEditingItem(null);
+    setClassModalVisible(false);
+    setEventModalVisible(false);
+  };
 
   const renderItem = ({ item }) => (
     <View
@@ -27,24 +116,113 @@ export default function ScheduleScreen() {
         item.type === "class" ? styles.classItem : styles.eventItem,
       ]}
     >
-      <Text style={styles.itemTitle}>{item.name}</Text>
-      <Text>
-        {item.startTime} - {item.endTime}
-      </Text>
-      <Text>Days: {item.days.join(", ")}</Text>
-      {item.type === "event" && <Text>Event Type: {item.eventType}</Text>}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.itemTitle}>{item.name}</Text>
+        <Text>
+          {item.startTime} - {item.endTime}
+        </Text>
+        <Text>Days: {item.days.join(", ")}</Text>
+      </View>
+      <View style={styles.itemButtonsContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => startEditItem(item)}
+        >
+          <Ionicons name="create-outline" size={24} color="#2196F3" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => deleteItem(item.id)}
+        >
+          <Ionicons name="trash-outline" size={24} color="#F44336" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
+  const classes = schedule.filter((item) => item.type === "class");
+  const sleepEvents = schedule.filter((item) => item.eventType === "Sleep");
+  const studyEvents = schedule.filter((item) => item.eventType === "Study");
+  const workoutEvents = schedule.filter((item) => item.eventType === "Workout");
+  const otherEvents = schedule.filter(
+    (item) =>
+      item.type === "event" &&
+      !["Sleep", "Study", "Workout"].includes(item.eventType)
+  );
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Weekly Schedule</Text>
-      <FlatList
-        data={schedule}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={<Text>No items yet.</Text>}
-      />
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Classes</Text>
+        {classes.length === 0 ? (
+          <Text style={styles.emptyText}>No classes scheduled.</Text>
+        ) : (
+          <FlatList
+            data={classes}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        )}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Sleep</Text>
+        {sleepEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No sleep schedules.</Text>
+        ) : (
+          <FlatList
+            data={sleepEvents}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        )}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Study</Text>
+        {studyEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No study sessions.</Text>
+        ) : (
+          <FlatList
+            data={studyEvents}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        )}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Workout</Text>
+        {workoutEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No workouts scheduled.</Text>
+        ) : (
+          <FlatList
+            data={workoutEvents}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        )}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Other Events</Text>
+        {otherEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No other events.</Text>
+        ) : (
+          <FlatList
+            data={otherEvents}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        )}
+      </View>
 
       <View style={styles.buttonsRow}>
         <TouchableOpacity
@@ -61,33 +239,58 @@ export default function ScheduleScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Modals */}
       <AddClassModal
         visible={classModalVisible}
-        onClose={() => setClassModalVisible(false)}
+        onClose={handleCloseModals}
         onAdd={addClass}
+        onUpdate={updateItem}
+        itemToEdit={editingItem}
       />
       <AddEventModal
         visible={eventModalVisible}
-        onClose={() => setEventModalVisible(false)}
+        onClose={handleCloseModals}
         onAdd={addEvent}
+        onUpdate={updateItem}
+        eventToEdit={editingItem}
       />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  item: { padding: 12, borderRadius: 8, marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+  sectionContainer: { marginBottom: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
   classItem: { backgroundColor: "#f2f2f2" },
   eventItem: { backgroundColor: "#e6f7ff" },
   itemTitle: { fontSize: 16, fontWeight: "bold" },
   buttonsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginTop: 10,
+    marginTop: 20,
+    marginBottom: 40,
   },
   addButton: { backgroundColor: "#2196F3", padding: 12, borderRadius: 10 },
   addButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  itemButtonsContainer: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  actionButton: { padding: 5 },
+  emptyText: {
+    color: "gray",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 5,
+  },
 });

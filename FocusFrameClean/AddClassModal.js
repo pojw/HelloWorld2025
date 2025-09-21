@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,22 @@ import {
   Button,
   StyleSheet,
   Modal,
-  TextInput, // <-- add this
+  TextInput,
   ScrollView,
 } from "react-native";
 
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-const minutes = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, 10, ... 55
+const minutes = ["00", "15", "30", "45"];
 const ampm = ["AM", "PM"];
 
-export default function AddClassModal({ visible, onClose, onAdd }) {
+export default function AddClassModal({
+  visible,
+  onClose,
+  onAdd,
+  onUpdate,
+  itemToEdit,
+}) {
   const [name, setName] = useState("");
   const [startHour, setStartHour] = useState(8);
   const [startMinute, setStartMinute] = useState("00");
@@ -27,33 +33,65 @@ export default function AddClassModal({ visible, onClose, onAdd }) {
     daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
   );
 
+  useEffect(() => {
+    if (itemToEdit) {
+      // Set form state based on the item being edited
+      setName(itemToEdit.name);
+      // Logic to parse and set time and day states
+      const [start, startPart] = itemToEdit.startTime.split(" ");
+      const [end, endPart] = itemToEdit.endTime.split(" ");
+      const [startH, startM] = start.split(":");
+      const [endH, endM] = end.split(":");
+
+      setStartHour(parseInt(startH, 10));
+      setStartMinute(startM);
+      setStartAMPM(startPart);
+      setEndHour(parseInt(endH, 10));
+      setEndMinute(endM);
+      setEndAMPM(endPart);
+
+      const daysMap = daysOfWeek.reduce(
+        (acc, day) => ({ ...acc, [day]: itemToEdit.days.includes(day) }),
+        {}
+      );
+      setSelectedDays(daysMap);
+    } else {
+      // Reset form if no item to edit
+      setName("");
+      setStartHour(8);
+      setStartMinute("00");
+      setStartAMPM("AM");
+      setEndHour(9);
+      setEndMinute("00");
+      setEndAMPM("AM");
+      setSelectedDays(
+        daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
+      );
+    }
+  }, [itemToEdit]); // Dependency array ensures this runs when itemToEdit changes
+
   const toggleDay = (day) =>
     setSelectedDays({ ...selectedDays, [day]: !selectedDays[day] });
 
   const formatTime = (h, m, a) => `${h}:${m} ${a}`;
 
-  const handleAdd = () => {
+  const handleSave = () => {
     if (!name) return;
+
     const newClass = {
-      id: Date.now().toString(),
+      id: itemToEdit ? itemToEdit.id : Date.now().toString(),
       name,
       startTime: formatTime(startHour, startMinute, startAMPM),
       endTime: formatTime(endHour, endMinute, endAMPM),
       days: Object.keys(selectedDays).filter((d) => selectedDays[d]),
+      type: "class",
     };
-    onAdd(newClass);
 
-    // Reset
-    setName("");
-    setStartHour(8);
-    setStartMinute("00");
-    setStartAMPM("AM");
-    setEndHour(9);
-    setEndMinute("00");
-    setEndAMPM("AM");
-    setSelectedDays(
-      daysOfWeek.reduce((acc, day) => ({ ...acc, [day]: false }), {})
-    );
+    if (itemToEdit) {
+      onUpdate(newClass);
+    } else {
+      onAdd(newClass);
+    }
     onClose();
   };
 
@@ -81,7 +119,9 @@ export default function AddClassModal({ visible, onClose, onAdd }) {
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.content}>
-          <Text style={styles.title}>Add Class</Text>
+          <Text style={styles.title}>
+            {itemToEdit ? "Edit Class" : "Add Class"}
+          </Text>
 
           <Text style={styles.subtitle}>Class Name</Text>
           <View style={{ marginBottom: 10 }}>
@@ -125,7 +165,10 @@ export default function AddClassModal({ visible, onClose, onAdd }) {
             ))}
           </View>
 
-          <Button title="Add Class" onPress={handleAdd} />
+          <Button
+            title={itemToEdit ? "Update Class" : "Add Class"}
+            onPress={handleSave}
+          />
           <Button title="Cancel" color="red" onPress={onClose} />
         </View>
       </View>
