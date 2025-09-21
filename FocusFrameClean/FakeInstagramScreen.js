@@ -1,137 +1,229 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { useRoute } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import FakeNotification from "./FakeNotification";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// This is the array of meaningful photos and messages for your demo.
-// Replace these with your own photos and messages.
-const demoPhotos = [
-  {
-    id: "1",
-    uri: "https://images.unsplash.com/photo-1543269826-b816a4e32d67",
-    aiMessage: "Your dad is proud of you. Don't lose focus.",
-    description: "A photo of a dad working diligently.",
-  },
-  {
-    id: "2",
-    uri: "https://images.unsplash.com/photo-1546410531-bb448658d55a",
-    aiMessage: "Your dog misses you. Take a break and go for a walk.",
-    description: "A photo of a happy dog waiting by the door.",
-  },
-  {
-    id: "3",
-    uri: "https://images.unsplash.com/photo-1520692744837-775c742c0f68",
-    aiMessage: "Your future is bright. Stay focused on your goals.",
-    description: "A photo of a student studying at night with a lamp.",
-  },
-  {
-    id: "4",
-    uri: "https://images.unsplash.com/photo-1560790100-c9a175f56470",
-    aiMessage:
-      "You've been studying hard. A short break can improve your focus.",
-    description: "A photo of someone relaxing with a book.",
-  },
-];
+// Import local images from the same directory
+import DoomScrolling1 from "./DoomScrolling1.webp";
+import DoomScrolling2 from "./DoomScrolling2.webp";
+import DoomScrolling3 from "./DoomScrolling3.jpeg";
+
+// Reusable Post Component
+const InstaPost = ({ profilePic, username, postImage, likes }) => (
+  <View style={instaStyles.postContainer}>
+    <View style={instaStyles.postHeader}>
+      <Image source={{ uri: profilePic }} style={instaStyles.profilePic} />
+      <Text style={instaStyles.username}>{username}</Text>
+    </View>
+    <Image source={postImage} style={instaStyles.postImage} />
+    <View style={instaStyles.postActions}>
+      <TouchableOpacity>
+        <Ionicons
+          name="heart-outline"
+          size={24}
+          color="black"
+          style={instaStyles.actionIcon}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity>
+        <Ionicons
+          name="chatbubble-outline"
+          size={24}
+          color="black"
+          style={instaStyles.actionIcon}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity>
+        <Ionicons
+          name="send-outline"
+          size={24}
+          color="black"
+          style={instaStyles.actionIcon}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity style={instaStyles.bookmarkIcon}>
+        <Ionicons name="bookmark-outline" size={24} color="black" />
+      </TouchableOpacity>
+    </View>
+    <Text style={instaStyles.likes}>{likes} likes</Text>
+    <Text style={instaStyles.caption}>
+      <Text style={{ fontWeight: "bold" }}>{username}</Text> A caption goes
+      here...
+    </Text>
+  </View>
+);
 
 export default function FakeInstagramScreen() {
   const route = useRoute();
-  const { photo, activity } = route.params || {}; // Get passed parameters
+  const { photo, activity } = route.params || {};
 
   const [showNotification, setShowNotification] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [userPhotos, setUserPhotos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load photos from AsyncStorage on component mount
+  useEffect(() => {
+    const loadUserPhotos = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("photos");
+        if (saved) {
+          setUserPhotos(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error("Failed to load user photos", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUserPhotos();
+  }, []);
 
   useEffect(() => {
-    // This timer will trigger the notification logic
-    const timer = setInterval(() => {
-      setElapsedTime((prevTime) => prevTime + 1);
-    }, 1000); // Update every second
+    if (!loading) {
+      const timer = setInterval(() => {
+        setElapsedTime((prevTime) => {
+          const newTime = prevTime + 1;
 
-    // This is the trigger for your fake notification.
-    if (elapsedTime === 5) {
-      // Trigger the notification after 5 seconds of scrolling
-      const randomIndex = Math.floor(Math.random() * demoPhotos.length);
-      const randomPhoto = demoPhotos[randomIndex];
+          if (newTime === 5) {
+            if (userPhotos.length > 0) {
+              setShowNotification(true);
+              setTimeout(() => {
+                setShowNotification(false);
+              }, 4000);
+            }
+            return 0;
+          }
+          return newTime;
+        });
+      }, 1000);
 
-      setShowNotification(true);
-
-      // Hide the notification after a few seconds
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 4000);
-
-      // Reset the timer after the notification
-      setElapsedTime(0);
+      return () => clearInterval(timer);
     }
+  }, [loading, userPhotos]);
 
-    // Cleanup the timer when the component unmounts.
-    return () => clearInterval(timer);
-  }, [elapsedTime, photo]);
+  if (loading) {
+    return (
+      <View style={instaStyles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={{ marginTop: 10 }}>Loading feed...</Text>
+      </View>
+    );
+  }
+
+  // The photo for the notification is now the first one in the userPhotos array
+  const notifPhotoMessage = userPhotos.length > 0 ? userPhotos[0] : null;
 
   return (
-    <View style={styles.container}>
-      {/* The fake notification banner is rendered here */}
-      {/* Use the passed photo if it exists, otherwise use a random one */}
+    <View style={instaStyles.container}>
       <FakeNotification
         visible={showNotification}
-        photoMessage={
-          photo || demoPhotos[Math.floor(Math.random() * demoPhotos.length)]
-        }
+        photoMessage={notifPhotoMessage}
       />
-      <Text style={styles.headerText}>Instagram Feed</Text>
+
+      <View style={instaStyles.topNav}>
+        <Ionicons name="camera-outline" size={28} color="black" />
+        <Text style={instaStyles.logoText}>Instagram</Text>
+        <Ionicons name="send-outline" size={28} color="black" />
+      </View>
+
       <ScrollView>
-        <View style={styles.post}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1517457210719-7561f36b69a3",
-            }}
-            style={styles.postImage}
-          />
-          <Text style={styles.postText}>Liked by you and 1,234 others</Text>
-        </View>
-        <View style={styles.post}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1518173544-245452296704",
-            }}
-            style={styles.postImage}
-          />
-          <Text style={styles.postText}>Liked by you and 987 others</Text>
-        </View>
-        <View style={styles.post}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1502081199342-99042b993358",
-            }}
-            style={styles.postImage}
-          />
-          <Text style={styles.postText}>Liked by you and 567 others</Text>
-        </View>
+        <InstaPost
+          profilePic="https://images.unsplash.com/photo-1549048375-f982a20b22f2?auto=format&fit=crop&q=80&w=2070&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          username="traveler_adventures"
+          postImage={DoomScrolling1}
+          likes="1,234"
+        />
+        <InstaPost
+          profilePic="https://images.unsplash.com/photo-1533261204642-c2e8a1d13781?auto=format&fit=crop&q=80&w=1964&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          username="foodie_finds"
+          postImage={DoomScrolling2}
+          likes="987"
+        />
+        <InstaPost
+          profilePic="https://images.unsplash.com/photo-1506794834888-c7d918361093?auto=format&fit=crop&q=80&w=1974&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          username="daily_inspiration"
+          postImage={DoomScrolling3}
+          likes="567"
+        />
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const instaStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
   },
-  headerText: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  topNav: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#dbdbdb",
+  },
+  logoText: {
     fontSize: 24,
     fontWeight: "bold",
-    textAlign: "center",
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
   },
-  post: {
+  postContainer: {
     marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#dbdbdb",
+  },
+  postHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+  },
+  profilePic: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+  },
+  username: {
+    fontWeight: "bold",
   },
   postImage: {
     width: "100%",
     height: 400,
   },
-  postText: {
+  postActions: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
+  },
+  actionIcon: {
+    marginRight: 15,
+  },
+  bookmarkIcon: {
+    marginLeft: "auto",
+  },
+  likes: {
+    fontWeight: "bold",
+    paddingHorizontal: 10,
+  },
+  caption: {
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
 });
