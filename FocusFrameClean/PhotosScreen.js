@@ -7,19 +7,26 @@ import {
   Image,
   StyleSheet,
   FlatList,
+  TouchableOpacity,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import FakeNotification from "./FakeNotification";
+import { generateMiniMessage } from "./aiHelper";
 
 export default function PhotoScreen() {
   const [photos, setPhotos] = useState([]);
   const [description, setDescription] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
-  // Notification state
   const [notifVisible, setNotifVisible] = useState(false);
-  const [notifData, setNotifData] = useState(null);
+  const [notifPhotoMessage, setNotifPhotoMessage] = useState(null);
+
+  useEffect(() => {
+    loadPhotos();
+  }, []);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -33,48 +40,65 @@ export default function PhotoScreen() {
     }
   };
 
-  const addPhoto = async () => {
-    if (!selectedImage || !description.trim()) return;
-
-    const newPhoto = {
-      id: Date.now().toString(),
-      uri: selectedImage,
-      description, // this will act as the quote/message for notification
-    };
-
-    const updatedPhotos = [...photos, newPhoto];
-    setPhotos(updatedPhotos);
-    setSelectedImage(null);
-    setDescription("");
-
-    await AsyncStorage.setItem("photos", JSON.stringify(updatedPhotos));
-  };
-
   const loadPhotos = async () => {
     const saved = await AsyncStorage.getItem("photos");
     if (saved) setPhotos(JSON.parse(saved));
   };
 
-  useEffect(() => {
-    loadPhotos();
-  }, []);
+  const addPhoto = async () => {
+    if (!selectedImage || !description.trim()) return;
 
-  // Trigger a notification with a random photo+quote pair
+    if (editingId) {
+      const updatedPhotos = photos.map((p) =>
+        p.id === editingId
+          ? { ...p, description, aiMessage: generateMiniMessage(description) }
+          : p
+      );
+      setPhotos(updatedPhotos);
+      setEditingId(null);
+    } else {
+      const newPhoto = {
+        id: Date.now().toString(),
+        uri: selectedImage,
+        description,
+        aiMessage: generateMiniMessage(description),
+      };
+      setPhotos([...photos, newPhoto]);
+    }
+
+    setSelectedImage(null);
+    setDescription("");
+    await AsyncStorage.setItem("photos", JSON.stringify(photos));
+  };
+
+  const editPhoto = (photo) => {
+    setEditingId(photo.id);
+    setSelectedImage(photo.uri);
+    setDescription(photo.description);
+  };
+
+  const deletePhoto = async (id) => {
+    const filtered = photos.filter((p) => p.id !== id);
+    setPhotos(filtered);
+    await AsyncStorage.setItem("photos", JSON.stringify(filtered));
+  };
+
   const triggerNotification = () => {
     if (photos.length === 0) return;
-
     const randomIndex = Math.floor(Math.random() * photos.length);
-    const randomPhoto = photos[randomIndex];
-
-    setNotifData({
-      imageUri: randomPhoto.uri,
-      message: randomPhoto.description,
-    });
+    setNotifPhotoMessage(photos[randomIndex]);
     setNotifVisible(true);
+    setTimeout(() => setNotifVisible(false), 4000);
   };
 
   return (
     <View style={styles.container}>
+      {/* Fake notification banner */}
+      <FakeNotification
+        photoMessage={notifPhotoMessage}
+        visible={notifVisible}
+      />
+
       <Button title="Pick a photo" onPress={pickImage} />
       {selectedImage && (
         <Image source={{ uri: selectedImage }} style={styles.image} />
@@ -86,14 +110,15 @@ export default function PhotoScreen() {
         onChangeText={setDescription}
         onSubmitEditing={addPhoto}
       />
-      <Button title="Add Photo" onPress={addPhoto} />
-
-      {/* Test notification button */}
       <Button
-        title="Test Notification"
-        onPress={triggerNotification}
-        color="#6200EE"
+        title={editingId ? "Update Photo" : "Add Photo"}
+        onPress={addPhoto}
       />
+
+      {/* Test Notification Button */}
+      <View style={{ marginVertical: 10 }}>
+        <Button title="Test Notification" onPress={triggerNotification} />
+      </View>
 
       <FlatList
         data={photos}
@@ -103,16 +128,21 @@ export default function PhotoScreen() {
             <Image source={{ uri: item.uri }} style={styles.imageSmall} />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={styles.description}>{item.description}</Text>
+              <Text style={styles.aiMessage}>{item.aiMessage}</Text>
+            </View>
+            <View style={styles.icons}>
+              <TouchableOpacity
+                onPress={() => editPhoto(item)}
+                style={{ marginRight: 10 }}
+              >
+                <Ionicons name="create-outline" size={24} color="#555" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => deletePhoto(item.id)}>
+                <Ionicons name="trash-outline" size={24} color="red" />
+              </TouchableOpacity>
             </View>
           </View>
         )}
-      />
-
-      {/* Fake notification */}
-      <FakeNotification
-        visible={notifVisible}
-        data={notifData}
-        onHide={() => setNotifVisible(false)}
       />
     </View>
   );
@@ -131,4 +161,6 @@ const styles = StyleSheet.create({
   imageSmall: { width: 60, height: 60, borderRadius: 8 },
   photoItem: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   description: { fontWeight: "bold" },
+  aiMessage: { fontStyle: "italic", color: "gray" },
+  icons: { flexDirection: "row", alignItems: "center" },
 });
