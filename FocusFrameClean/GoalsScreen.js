@@ -1,58 +1,45 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
+  FlatList,
+  TouchableOpacity,
   TextInput,
   Button,
   StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Modal,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import * as Progress from "react-native-progress";
-
-const generateSteps = (goalText) => [
-  { id: "1", text: `Start small: research about ${goalText}`, done: false },
-  { id: "2", text: `Work 10 minutes daily on ${goalText}`, done: false },
-  { id: "3", text: `Track your progress on ${goalText}`, done: false },
-  { id: "4", text: `Celebrate small wins`, done: false },
-];
+import { GoalsContext } from "./GoalsContext";
 
 const priorityColors = {
-  1: "#b71c1c", // dark red
-  2: "#d32f2f", // red
-  3: "#f57c00", // orange
-  4: "#fbc02d", // yellow
-  5: "#388e3c", // green
+  1: "#b71c1c",
+  2: "#d32f2f",
+  3: "#f57c00",
+  4: "#fbc02d",
+  5: "#388e3c",
 };
 
 export default function GoalsScreen({ navigation }) {
-  const [goals, setGoals] = useState([]);
+  const { goals, setGoals } = useContext(GoalsContext);
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState(null);
-  const [priority, setPriority] = useState(3); // default priority
-  const [priorityModal, setPriorityModal] = useState(false);
+  const [priority, setPriority] = useState(3);
 
-  useEffect(() => {
-    const loadGoals = async () => {
-      const saved = await AsyncStorage.getItem("goals");
-      if (saved) setGoals(JSON.parse(saved));
-    };
-    loadGoals();
-  }, []);
-
-  useEffect(() => {
-    AsyncStorage.setItem("goals", JSON.stringify(goals));
-  }, [goals]);
+  const generateSteps = (goalText) => [
+    { id: "1", text: `Start small: research about ${goalText}`, done: false },
+    { id: "2", text: `Work 10 minutes daily on ${goalText}`, done: false },
+    { id: "3", text: `Track your progress on ${goalText}`, done: false },
+    { id: "4", text: `Celebrate small wins`, done: false },
+  ];
 
   const addGoal = () => {
     if (!input.trim()) return;
+
     if (editingId) {
       setGoals(
-        goals.map((goal) =>
-          goal.id === editingId ? { ...goal, text: input, priority } : goal
+        goals.map((g) =>
+          g.id === editingId ? { ...g, text: input, priority } : g
         )
       );
       setEditingId(null);
@@ -67,6 +54,7 @@ export default function GoalsScreen({ navigation }) {
         },
       ]);
     }
+
     setInput("");
     setPriority(3);
   };
@@ -77,64 +65,22 @@ export default function GoalsScreen({ navigation }) {
     setEditingId(goal.id);
   };
 
-  const deleteGoal = (id) => {
-    setGoals(goals.filter((goal) => goal.id !== id));
-  };
-
-  const openPriorityModal = () => setPriorityModal(true);
-  const closePriorityModal = () => setPriorityModal(false);
-
-  const selectPriority = (value) => {
-    setPriority(value);
-    closePriorityModal();
-  };
+  const deleteGoal = (id) => setGoals(goals.filter((g) => g.id !== id));
 
   return (
     <View style={styles.container}>
-      {/* Input row */}
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
           placeholder="Enter a goal..."
           value={input}
           onChangeText={setInput}
-          onSubmitEditing={addGoal} // ✅ Press Enter to add goal
+          onSubmitEditing={addGoal}
           returnKeyType="done"
         />
-        <TouchableOpacity
-          style={styles.priorityButton}
-          onPress={openPriorityModal}
-        >
-          <Text style={{ color: priorityColors[priority], fontWeight: "bold" }}>
-            Priority: {priority}
-          </Text>
-        </TouchableOpacity>
         <Button title={editingId ? "Update" : "Add"} onPress={addGoal} />
       </View>
 
-      {/* Priority Modal */}
-      <Modal visible={priorityModal} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={closePriorityModal}
-        >
-          <View style={styles.modalContent}>
-            {[1, 2, 3, 4, 5].map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={styles.modalItem}
-                onPress={() => selectPriority(p)}
-              >
-                <Text style={{ color: priorityColors[p], fontWeight: "bold" }}>
-                  {p}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Goals list */}
       <FlatList
         data={[...goals].sort((a, b) => a.priority - b.priority)}
         keyExtractor={(item) => item.id}
@@ -150,26 +96,17 @@ export default function GoalsScreen({ navigation }) {
                 { borderColor: priorityColors[item.priority] },
               ]}
               onPress={() =>
-                navigation.navigate("GoalDetails", {
-                  goal: item,
-                  updateGoal: (updatedGoal) => {
-                    setGoals((prevGoals) =>
-                      prevGoals.map((g) =>
-                        g.id === updatedGoal.id ? updatedGoal : g
-                      )
-                    );
-                  },
-                })
+                navigation.navigate("GoalDetails", { goalId: item.id })
               }
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.goalText}>{item.text}</Text>
                 <Progress.Bar
                   progress={progress}
-                  width={250} // smaller width
+                  width={250}
                   color="green"
                   borderRadius={5}
-                  height={8} // keep thickness
+                  height={8}
                 />
               </View>
               <View style={styles.actions}>
@@ -189,24 +126,13 @@ export default function GoalsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
+  container: { flex: 1, padding: 16 },
+  inputRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   input: {
     flex: 1,
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 8,
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  priorityButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
     marginRight: 8,
   },
@@ -221,18 +147,4 @@ const styles = StyleSheet.create({
   },
   goalText: { fontSize: 16, marginBottom: 5 },
   actions: { flexDirection: "row", gap: 10 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-  },
-  modalItem: {
-    padding: 10,
-  },
 });

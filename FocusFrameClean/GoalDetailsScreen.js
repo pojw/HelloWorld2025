@@ -1,35 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   TextInput,
   Button,
+  StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { GoalsContext } from "./GoalsContext";
 
-export default function GoalDetailsScreen({ route, navigation }) {
-  const { goal, updateGoal } = route.params;
+export default function GoalDetailsScreen({ route }) {
+  const { goals, updateGoal } = useContext(GoalsContext);
+  const { goalId } = route.params;
 
+  const goal = goals.find((g) => g.id === goalId);
   const [steps, setSteps] = useState(goal.steps || []);
   const [editingId, setEditingId] = useState(null);
   const [input, setInput] = useState("");
   const [newStepText, setNewStepText] = useState("");
 
-  // Update progress and persist to main GoalsScreen
   const persistSteps = (updatedSteps) => {
     setSteps(updatedSteps);
     updateGoal({ ...goal, steps: updatedSteps });
   };
 
-  const toggleStep = (id) => {
-    const updated = steps.map((s) =>
-      s.id === id ? { ...s, done: !s.done } : s
-    );
-    persistSteps(updated);
-  };
+  const toggleStep = (id) =>
+    persistSteps(steps.map((s) => (s.id === id ? { ...s, done: !s.done } : s)));
 
   const editStep = (id, text) => {
     setInput(text);
@@ -37,39 +35,30 @@ export default function GoalDetailsScreen({ route, navigation }) {
   };
 
   const saveStep = () => {
-    const updated = steps.map((s) =>
-      s.id === editingId ? { ...s, text: input } : s
+    persistSteps(
+      steps.map((s) => (s.id === editingId ? { ...s, text: input } : s))
     );
     setEditingId(null);
     setInput("");
-    persistSteps(updated);
   };
 
-  const deleteStep = (id) => {
-    const updated = steps.filter((s) => s.id !== id);
-    persistSteps(updated);
-  };
+  const deleteStep = (id) => persistSteps(steps.filter((s) => s.id !== id));
 
   const addStep = () => {
     if (!newStepText.trim()) return;
-    const newStep = {
-      id: Date.now().toString(),
-      text: newStepText,
-      done: false,
-    };
-    const updated = [...steps, newStep];
+    persistSteps([
+      ...steps,
+      { id: Date.now().toString(), text: newStepText, done: false },
+    ]);
     setNewStepText("");
-    persistSteps(updated);
   };
 
-  // Progress calculation
   const progress =
     steps.length === 0 ? 0 : steps.filter((s) => s.done).length / steps.length;
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{goal.text}</Text>
-
       <Text style={styles.progressText}>
         Progress: {Math.round(progress * 100)}%
       </Text>
@@ -77,21 +66,17 @@ export default function GoalDetailsScreen({ route, navigation }) {
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
 
-      {/* Add new step */}
-      {/* Add new step */}
       <View style={styles.addStepRow}>
         <TextInput
           style={styles.input}
           placeholder="New step..."
           value={newStepText}
           onChangeText={setNewStepText}
-          onSubmitEditing={addStep} // ✅ Press Enter to add
-          returnKeyType="done" // Shows “Done” on keyboard
+          onSubmitEditing={addStep}
         />
         <Button title="Add" onPress={addStep} />
       </View>
 
-      {/* Steps list */}
       <FlatList
         data={steps}
         keyExtractor={(item) => item.id}
